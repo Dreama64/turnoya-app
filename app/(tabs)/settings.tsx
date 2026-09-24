@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   };
 
   const openMinsalSource = () => {
-    Linking.openURL('https://farmaciasdeturno.minsal.cl/');
+    Linking.openURL('https://datos.gob.cl/dataset/farmacias-en-chile');
   };
 
   return (

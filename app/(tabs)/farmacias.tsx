@@ -724,5 +724,5 @@ const styles = StyleSheet.create({
   },
   modalSearchInput: { flex: 1, fontSize: 14, padding: 0 },
   modalItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1 },
-  modalItemText: { fontSize: 15 },
+  modalItemText: { fontSize: 15, flex: 1, paddingRight: 8 },
 });
