@@ -23,7 +23,7 @@ export default function RootLayout() {
           <Ionicons name="add" size={48} color="#10B981" />
         </View>
         <Text style={styles.title}>TurnoYa</Text>
-        <Text style={styles.subtitle}>Urgencias y Farmacias de Turno</Text>
+        <Text style={styles.subtitle}>Farmacias, Urgencias y Veterinarias</Text>
       </View>
     );
   }

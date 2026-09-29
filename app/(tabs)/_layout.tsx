@@ -14,14 +14,15 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: isDark ? '#0B1120' : '#FFFFFF',
           borderTopColor: isDark ? '#1E293B' : '#E2E8F0',
-          height: Platform.OS === 'android' ? 76 : 82,
-          paddingBottom: Platform.OS === 'android' ? 18 : 24,
+          height: Platform.OS === 'android' ? 95 : 74,
+          paddingBottom: Platform.OS === 'android' ? 24 : 10,
           paddingTop: 8,
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: isDark ? '#64748B' : '#94A3B8',
+        tabBarItemStyle: { paddingBottom: Platform.OS === 'android' ? 24 : 10 },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
         },
       }}
@@ -50,6 +51,15 @@ export default function TabLayout() {
           title: 'Urgencias',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="pulse-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="veterinarias"
+        options={{
+          title: 'Veterinarias',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="paw-outline" size={size} color={color} />
           ),
         }}
       />

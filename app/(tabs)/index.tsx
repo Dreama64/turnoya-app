@@ -134,6 +134,32 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Tarjeta Urgencias Veterinarias */}
+        <TouchableOpacity
+          style={[styles.heroCardUrgency, { backgroundColor: "#7C3AED" }]}
+          activeOpacity={0.85}
+          onPress={() => router.push("/(tabs)/veterinarias" as any)}
+        >
+          <View style={styles.cardHeaderRow}>
+            <View style={[styles.iconCircle, { backgroundColor: "rgba(255, 255, 255, 0.2)" }]}>
+              <Ionicons name="paw" size={24} color="#FFFFFF" />
+            </View>
+            <View style={[styles.cardTag, { backgroundColor: "rgba(255, 255, 255, 0.2)" }]}>
+              <Text style={styles.cardTagText}>24/7 MASCOTAS</Text>
+            </View>
+          </View>
+
+          <Text style={styles.cardTitle}>Urgencias Veterinarias</Text>
+          <Text style={styles.cardDescription}>
+            Clínicas veterinarias con atención 24 hrs, urgencias nocturnas y hospitalización.
+          </Text>
+
+          <View style={styles.actionArrowRow}>
+            <Text style={styles.actionText}>Ver veterinarias de turno</Text>
+            <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
+
         {/* Números SOS */}
         <View style={styles.emergencySection}>
           <Text style={[styles.sectionTitle, { color: colors.subtext }]}>
@@ -226,7 +252,7 @@ const styles = StyleSheet.create({
   regionOption: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 9 },
   regionOptionText: { fontSize: 12, fontWeight: '700' },
   heroCardPharmacy: { backgroundColor: '#059669', borderRadius: 20, padding: 20, marginBottom: 14 },
-  heroCardUrgency: { backgroundColor: '#DC2626', borderRadius: 20, padding: 20, marginBottom: 22 },
+  heroCardUrgency: { backgroundColor: '#DC2626', borderRadius: 20, padding: 20, marginBottom: 14 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   iconCircle: {
     width: 44,
