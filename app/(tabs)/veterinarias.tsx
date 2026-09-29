@@ -9,12 +9,30 @@ import {
   Linking,
   Platform,
   Modal,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { useTheme } from '../../context/ThemeContext';
 import { VETERINARIAS_DATA, VeterinariaUrgencia } from '../../constants/veterinariasData';
+
+// Fórmula de Haversine para distancia en kilómetros
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export default function VeterinariasScreen() {
   const { colors } = useTheme();
@@ -25,6 +43,11 @@ export default function VeterinariasScreen() {
   const [selectedComuna, setSelectedComuna] = useState<string>('Todas');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [comunaModalVisible, setComunaModalVisible] = useState(false);
+
+  // Estados de GPS
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [sortByGps, setSortByGps] = useState(false);
 
   // Comunas según región
   const comunasDisponibles = useMemo(() => {
@@ -39,8 +62,44 @@ export default function VeterinariasScreen() {
     setSelectedComuna('Todas');
   };
 
+  const handleGpsSort = async () => {
+    if (sortByGps) {
+      setSortByGps(false);
+      return;
+    }
+
+    setGpsLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permiso necesario',
+          'Concede permiso de ubicación para ordenar las veterinarias más cercanas.'
+        );
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      setUserCoords({
+        lat: loc.coords.latitude,
+        lng: loc.coords.longitude,
+      });
+      setSortByGps(true);
+    } catch (e) {
+      Alert.alert(
+        'GPS no disponible',
+        'No pudimos determinar tu ubicación actual. Revisa que el GPS esté activo.'
+      );
+    } finally {
+      setGpsLoading(false);
+    }
+  };
+
   const filteredVets = useMemo(() => {
-    return VETERINARIAS_DATA.filter((v) => {
+    let list = VETERINARIAS_DATA.filter((v) => {
       const matchRegion = v.region === selectedRegion;
       const matchComuna =
         selectedComuna === 'Todas' ||
@@ -53,8 +112,24 @@ export default function VeterinariasScreen() {
         v.comuna.toLowerCase().includes(query);
 
       return matchRegion && matchComuna && matchSearch;
+    }).map((item) => {
+      let distanceKm: number | null = null;
+      if (userCoords && item.lat && item.lng) {
+        distanceKm = getDistanceKm(userCoords.lat, userCoords.lng, item.lat, item.lng);
+      }
+      return { ...item, distanceKm };
     });
-  }, [selectedRegion, selectedComuna, searchQuery]);
+
+    if (sortByGps && userCoords) {
+      list.sort((a, b) => {
+        if (a.distanceKm === null) return 1;
+        if (b.distanceKm === null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+    }
+
+    return list;
+  }, [selectedRegion, selectedComuna, searchQuery, sortByGps, userCoords]);
 
   const handleCall = (telefono: string) => {
     Linking.openURL(`tel:${telefono}`);
@@ -91,7 +166,7 @@ export default function VeterinariasScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Segmented Control de Región (Idéntico a Farmacias) */}
+      {/* Segmented Control de Región */}
       <View style={[styles.regionSegment, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <TouchableOpacity
           style={[
@@ -145,7 +220,7 @@ export default function VeterinariasScreen() {
         )}
       </View>
 
-      {/* Fila Filtro Comuna + Botón GPS */}
+      {/* Fila Filtro Comuna + Botón Por GPS */}
       <View style={styles.filterRow}>
         <TouchableOpacity
           style={[styles.dropdownFilter, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -159,13 +234,33 @@ export default function VeterinariasScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.gpsQuickBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={() => {
-            if (filteredVets.length > 0) handleNavigation(filteredVets[0]);
-          }}
+          style={[
+            styles.gpsQuickBtn,
+            { backgroundColor: colors.card, borderColor: sortByGps ? '#7C3AED' : colors.border },
+            sortByGps && { backgroundColor: 'rgba(124, 58, 237, 0.15)' },
+          ]}
+          onPress={handleGpsSort}
+          disabled={gpsLoading}
         >
-          <Ionicons name="navigate-outline" size={16} color="#7C3AED" />
-          <Text style={[styles.gpsQuickText, { color: colors.text }]}>Por GPS</Text>
+          {gpsLoading ? (
+            <ActivityIndicator size="small" color="#7C3AED" />
+          ) : (
+            <>
+              <Ionicons
+                name={sortByGps ? 'navigate' : 'navigate-outline'}
+                size={16}
+                color="#7C3AED"
+              />
+              <Text
+                style={[
+                  styles.gpsQuickText,
+                  { color: sortByGps ? '#7C3AED' : colors.text },
+                ]}
+              >
+                {sortByGps ? 'Cercanas' : 'Por GPS'}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -174,6 +269,7 @@ export default function VeterinariasScreen() {
         <View style={[styles.counterDot, { backgroundColor: '#7C3AED' }]} />
         <Text style={[styles.counterText, { color: colors.subtext }]}>
           {filteredVets.length} veterinarias en {selectedRegion === 'ohiggins' ? "Región de O'Higgins" : "Región Metropolitana"}
+          {sortByGps ? ' (ordenadas por cercanía)' : ''}
         </Text>
       </View>
 
@@ -184,7 +280,7 @@ export default function VeterinariasScreen() {
         contentContainerStyle={[styles.listScroll, { paddingBottom: insets.bottom + 28 }]}
         renderItem={({ item }) => (
           <View style={[styles.vetCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {/* Header Tarjeta: Badge de turno a la izq, Comuna a la der */}
+            {/* Header Tarjeta */}
             <View style={styles.cardHeader}>
               <View
                 style={[
@@ -208,9 +304,21 @@ export default function VeterinariasScreen() {
                 </Text>
               </View>
 
-              <Text style={[styles.comunaHeaderTag, { color: colors.subtext }]}>
-                {item.comuna.toUpperCase()}
-              </Text>
+              <View style={styles.headerRightInfo}>
+                {item.distanceKm !== null && item.distanceKm !== undefined && (
+                  <View style={styles.distanceBadge}>
+                    <Ionicons name="navigate" size={11} color="#A78BFA" />
+                    <Text style={styles.distanceText}>
+                      {item.distanceKm < 1
+                        ? `${Math.round(item.distanceKm * 1000)} m`
+                        : `${item.distanceKm.toFixed(1)} km`}
+                    </Text>
+                  </View>
+                )}
+                <Text style={[styles.comunaHeaderTag, { color: colors.subtext }]}>
+                  {item.comuna.toUpperCase()}
+                </Text>
+              </View>
             </View>
 
             {/* Nombre y Dirección */}
@@ -225,7 +333,7 @@ export default function VeterinariasScreen() {
               </Text>
             </View>
 
-            {/* Botones de Acción (Cómo llegar & Llamar) */}
+            {/* Botones de Acción */}
             <View style={styles.cardActions}>
               <TouchableOpacity
                 style={[styles.primaryActionBtn, { backgroundColor: '#7C3AED' }]}
@@ -387,6 +495,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+  },
+  headerRightInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  distanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  distanceText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#A78BFA',
   },
   statusBadge: {
     flexDirection: 'row',
